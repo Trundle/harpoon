@@ -5,8 +5,8 @@ harpoon
 Locates Docker containers with the help of an Ansible inventory.
 
 
-Requrirements
-=============
+Requirements
+============
 
 Python 2 (Ansible does not seem to support Python 3). Only tested with
 Python 2.7.
