@@ -20,14 +20,17 @@ def _get_vault_password(ask_for_password):
         return getpass("Vault password: ")
 
 
+def _is_no_such_container_exception(http_error):
+    return (http_error.response.status_code == requests.codes.not_found
+            and http_error.response.text.startswith("No such container: "))
+
+
 def _find_container(docker_client, container_id):
     try:
         try:
             info = docker_client.inspect_container(container_id)
         except HTTPError as exc:
-            if (exc.response.status_code != requests.codes.not_found
-                or not exc.response.text.startswith("No such container: ")
-            ):
+            if not _is_no_such_container_exception(exc):
                 raise
         else:
             return info
