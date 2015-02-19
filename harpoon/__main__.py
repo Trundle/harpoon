@@ -2,22 +2,18 @@
 
 from __future__ import unicode_literals
 
-from getpass import getpass
 
 import click
 import docker
 import requests
-from ansible.inventory import Inventory
 from requests.exceptions import HTTPError, RequestException
+
+from harpoon.hostlistproviders import ansible
 
 
 DOCKER_PORT = 2375
 DOCKER_VERSION = "1.15"
 
-
-def _get_vault_password(ask_for_password):
-    if ask_for_password:
-        return getpass("Vault password: ")
 
 
 def _is_no_such_container_exception(http_error):
@@ -55,20 +51,25 @@ def _pretty_print_container(host, container, repo_tags):
     click.echo(click.style(msg, fg="green"))
 
 
-@click.group()
+class _FireGroup(click.Group):
+    def add_command(self, cmd, name=None):
+        click.argument("container_id")(cmd)
+        cmd_callback = cmd.callback
+        def callback(**kwargs):
+            container_id = kwargs.pop("container_id")
+            return (cmd_callback(**kwargs), container_id)
+        cmd.callback = callback
+        super(_FireGroup, self).add_command(cmd, name)
+
+
+@click.group(cls=_FireGroup)
 def fire():
     pass
 
 
-@fire.command()
-@click.option("-i", "--inventory-file")
-@click.option("--ask-vault-pass", is_flag=True, default=False)
-@click.option("--limit", default="all")
-@click.argument("container_id")
-def ansible(ask_vault_pass, inventory_file, limit, container_id):
-    vault_pass = _get_vault_password(ask_vault_pass)
-    inventory = Inventory(inventory_file, vault_password=vault_pass)
-    host_list = inventory.get_hosts(limit)
+@fire.resultcallback()
+def invoke(result):
+    (host_list, container_id) = result
     for host in host_list:
         base_url = "tcp://{}:{}".format(host.name, DOCKER_PORT)
         docker_client = docker.Client(base_url=base_url, version=DOCKER_VERSION)
@@ -82,6 +83,9 @@ def ansible(ask_vault_pass, inventory_file, limit, container_id):
             id=container_id,
             hosts=", ".join(host.name for host in host_list))
         click.echo(click.style(msg, fg="red"), err=True)
+
+
+ansible.create_provider_command(fire)
 
 
 if __name__ == "__main__":
