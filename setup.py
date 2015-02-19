@@ -15,11 +15,14 @@ setup(
     packages=["harpoon"],
     entry_points={
         "console_scripts": [
-            "harpoon = harpoon.__main__:fire"
+            "harpoon = harpoon.__main__:fire",
+            "harpoon-hipchat = harpoon.bot.hipchat:bot",
         ]
     },
     install_requires=[
         "ansible",
         "click",
         "docker-py",
+        # Bot dependencies
+        "sleekxmpp"
     ])
