@@ -48,7 +48,7 @@ def _get_repo_tags(docker_client, image_id):
 
 
 def _pretty_print_container(host, container, repo_tags):
-    msg = "Found container {id} on host {host} (tagged {tags})".format(
+    msg = "Found container {id} on host {host.name} (tagged {tags})".format(
         id=container["Id"],
         host=host,
         tags=", ".join(repo_tags))
@@ -63,12 +63,14 @@ def fire():
 @fire.command()
 @click.option("-i", "--inventory-file")
 @click.option("--ask-vault-pass", is_flag=True, default=False)
+@click.option("--limit", default="all")
 @click.argument("container_id")
-def ansible(ask_vault_pass, inventory_file, container_id):
+def ansible(ask_vault_pass, inventory_file, limit, container_id):
     vault_pass = _get_vault_password(ask_vault_pass)
     inventory = Inventory(inventory_file, vault_password=vault_pass)
-    for host in inventory.list_hosts():
-        base_url = "tcp://{}:{}".format(host, DOCKER_PORT)
+    host_list = inventory.get_hosts(limit)
+    for host in host_list:
+        base_url = "tcp://{}:{}".format(host.name, DOCKER_PORT)
         docker_client = docker.Client(base_url=base_url, version=DOCKER_VERSION)
         container = _find_container(docker_client, container_id)
         if container is not None:
@@ -78,7 +80,7 @@ def ansible(ask_vault_pass, inventory_file, container_id):
     else:
         msg = "Container {id} not found (hosts tried: {hosts})".format(
             id=container_id,
-            hosts=", ".join(inventory.list_hosts()))
+            hosts=", ".join(host.name for host in host_list))
         click.echo(click.style(msg, fg="red"), err=True)
 
 
