@@ -16,8 +16,9 @@ DELAY_EXTENSION = "xep_0203"
 
 
 class HarpoonBot(ClientXMPP):
-    def __init__(self, jid, password, rooms_to_join, host_list):
+    def __init__(self, jid, password, nick, rooms_to_join, host_list):
         ClientXMPP.__init__(self, jid, password)
+        self._nick = nick
         self._rooms_to_join = rooms_to_join
         self._host_list = host_list
         self.add_event_handler("session_start", self._on_session_started)
@@ -31,13 +32,12 @@ class HarpoonBot(ClientXMPP):
         self.get_roster()
 
     def _on_roster_update(self, event):
-        for (jid, nick) in self._rooms_to_join:
-            self.plugin[MUC_EXTENSION].joinMUC(jid, nick, wait=True)
+        for jid in self._rooms_to_join:
+            self.plugin[MUC_EXTENSION].joinMUC(jid, self._nick, wait=True)
 
     def _on_message(self, message):
-        delayed = bool(message["delay"]["stamp"])
-        body = message["body"]
-        if message["type"] == "groupchat" and not delayed and "harpoon" in body:
+        body = message["body"].strip()
+        if self._safe_to_react(message) and body.startswith("harpoon"):
             container_id = body.split(None, 1)[-1]
             container = find_container(self._host_list, container_id)
             if container:
@@ -47,6 +47,11 @@ class HarpoonBot(ClientXMPP):
                     id=container_id,
                     hosts=", ".join(host.name for host in self._host_list))
             message.reply(msg).send()
+
+    def _safe_to_react(self, message):
+        delayed = bool(message["delay"]["stamp"])
+        from_me = message["from"].resource == self._nick
+        return not delayed and not from_me
 
 
 @click.group()
@@ -62,7 +67,7 @@ def bot(jid, password, nickname, room):
 def run(host_list, jid, password, nickname, room):
     logging.basicConfig(level=logging.WARN)
 
-    xmpp = HarpoonBot(jid, password, [(room, nickname)], host_list)
+    xmpp = HarpoonBot(jid, password, nickname, [room], host_list)
     xmpp.connect()
     xmpp.process(block=True)
 
