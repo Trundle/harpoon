@@ -6,7 +6,7 @@ import logging
 
 import click
 
-from harpoon.docker import find_container
+from harpoon.docker import find_containers
 from harpoon.hostlistproviders import ansible
 
 
@@ -37,9 +37,10 @@ def fire():
 @fire.resultcallback()
 def invoke(result):
     (host_list, container_id) = result
-    container = find_container(host_list, container_id)
-    if container:
-        click.echo(click.style(container, fg="green"))
+    containers = find_containers(host_list, container_id)
+    if containers:
+        for container in containers:
+            click.echo(click.style(container, fg="green"))
     else:
         msg = "Container {id} not found (hosts tried: {hosts})".format(
             id=container_id,

@@ -7,7 +7,7 @@ import logging
 
 from sleekxmpp import ClientXMPP
 
-from harpoon.docker import find_container
+from harpoon.docker import find_containers
 from harpoon.hostlistproviders import ansible
 
 
@@ -39,14 +39,14 @@ class HarpoonBot(ClientXMPP):
         body = message["body"].strip()
         if self._safe_to_react(message) and body.startswith("harpoon"):
             container_id = body.split(None, 1)[-1]
-            container = find_container(self._host_list, container_id)
-            if container:
-                msg = container
+            containers = find_containers(self._host_list, container_id)
+            if containers:
+                message.reply("\n".join(containers)).send()
             else:
                 msg = "Container {id} not found (hosts tried: {hosts})".format(
                     id=container_id,
                     hosts=", ".join(host.name for host in self._host_list))
-            message.reply(msg).send()
+                message.reply(msg).send()
 
     def _safe_to_react(self, message):
         delayed = bool(message["delay"]["stamp"])

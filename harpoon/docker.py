@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 
 import logging
 import re
@@ -86,3 +86,27 @@ def find_containers_by_image(host_list, image):
                         host, container, image["RepoTags"])
                     containers_found.append(formatted_container)
     return containers_found
+
+
+def is_container_id(x):
+    """Crude heuristic to decide whether the given string is a possible
+    container ID.
+    """
+    digits = 0
+    letters = 0
+    for char in x:
+        if '0' <= char <= '9':
+            digits += 1
+        elif 'a' <= char <= 'f':
+            letters += 1
+        else:
+            return False
+    return (digits / (letters + digits)) > 0.3
+
+
+def find_containers(host_list, image_or_container_id):
+    if is_container_id(image_or_container_id):
+        container = find_container(host_list, image_or_container_id)
+        return [container] if container else []
+    else:
+        return find_containers_by_image(host_list, image_or_container_id)
