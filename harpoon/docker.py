@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import logging
+import re
+from collections import defaultdict
 
 import docker
 import requests
@@ -44,11 +46,43 @@ def _pretty_format_container(host, container, repo_tags):
         tags=", ".join(repo_tags))
 
 
+def _get_client(host):
+    base_url = "tcp://{}:{}".format(host.name, DOCKER_PORT)
+    return docker.Client(base_url=base_url, version=DOCKER_VERSION)
+
+
 def find_container(host_list, container_id):
     for host in host_list:
-        base_url = "tcp://{}:{}".format(host.name, DOCKER_PORT)
-        docker_client = docker.Client(base_url=base_url, version=DOCKER_VERSION)
+        docker_client = _get_client(host)
         container = _find_container(docker_client, container_id)
         if container is not None:
             repo_tags = _get_repo_tags(docker_client, container["Image"])
             return _pretty_format_container(host, container, repo_tags)
+
+
+def _create_image_matcher(image):
+    escaped_image = re.escape(image)
+    without_registry_matcher = re.compile(escaped_image + "(:|$)").match
+    with_registry_matcher = re.compile("/{}(:|$)".format(escaped_image)).search
+    def matcher(s):
+        return bool(without_registry_matcher(s) or with_registry_matcher(s))
+    return matcher
+
+
+def find_containers_by_image(host_list, image):
+    matcher = _create_image_matcher(image)
+    containers_found = []
+    images_found = defaultdict(list)
+    for host in host_list:
+        docker_client = _get_client(host)
+        for image in docker_client.images():
+            if any(matcher(tag) for tag in image["RepoTags"]):
+                images_found[(host, docker_client)].append(image)
+    for ((host, docker_client), images) in images_found.items():
+        for container in docker_client.containers():
+            for image in images:
+                if container["Image"] in image["RepoTags"]:
+                    formatted_container = _pretty_format_container(
+                        host, container, image["RepoTags"])
+                    containers_found.append(formatted_container)
+    return containers_found
