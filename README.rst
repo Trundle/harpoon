@@ -21,6 +21,10 @@ Then, to find on which host container ``9b57c6457edc`` runs, use the
 following command: ``harpoon ansible -i
 /path/to/your/inventory --ask-vault-pass 9b57c6457edc``.
 
+You can also provide a list of hosts manually instead of using
+ansible: ``harpoon hosts host1.example.com host2.example.com
+9b57c6457edc``.
+
 
 Runnig the hipchat bot
 ======================

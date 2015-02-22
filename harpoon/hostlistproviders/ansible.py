@@ -13,9 +13,12 @@ def _get_vault_password(ask_for_password):
 
 def create_provider_command(group):
     @group.command()
-    @click.option("-i", "--inventory-file")
-    @click.option("--ask-vault-pass", is_flag=True, default=False)
-    @click.option("--limit", default="all")
+    @click.option("-i", "--inventory-file", default="/etc/ansible/hosts",
+                  help="specify inventory host file")
+    @click.option("--ask-vault-pass", is_flag=True, default=False,
+                  help="ask for vault password")
+    @click.option("--limit", default="all",
+                  help="further limit selected hosts to an additional pattern")
     def ansible(ask_vault_pass, inventory_file, limit):
         vault_pass = _get_vault_password(ask_vault_pass)
         inventory = Inventory(inventory_file, vault_password=vault_pass)

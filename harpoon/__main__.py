@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import logging
+from functools import wraps
 
 import click
 
@@ -17,9 +18,14 @@ class _EchoHandler(logging.StreamHandler):
 
 
 class _FireGroup(click.Group):
+    """Custom group that wraps the commands that get added to it:
+    - The command gets an extra argument "container_id"
+    - The command's callback will return the pair (command return value, container id)
+    """
     def add_command(self, cmd, name=None):
         click.argument("container_id")(cmd)
         cmd_callback = cmd.callback
+        @wraps(cmd_callback)
         def callback(**kwargs):
             container_id = kwargs.pop("container_id")
             return (cmd_callback(**kwargs), container_id)
