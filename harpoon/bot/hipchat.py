@@ -45,7 +45,7 @@ class HarpoonBot(ClientXMPP):
             else:
                 msg = "Container {id} not found (hosts tried: {hosts})".format(
                     id=container_id,
-                    hosts=", ".join(host.name for host in self._host_list))
+                    hosts=", ".join(self._host_list))
                 message.reply(msg).send()
 
     def _safe_to_react(self, message):

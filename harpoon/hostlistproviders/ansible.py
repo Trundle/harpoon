@@ -19,5 +19,6 @@ def create_provider_command(group):
     def ansible(ask_vault_pass, inventory_file, limit):
         vault_pass = _get_vault_password(ask_vault_pass)
         inventory = Inventory(inventory_file, vault_password=vault_pass)
-        return inventory.get_hosts(limit)
+        hosts = inventory.get_hosts(limit)
+        return [host.name for host in hosts]
     return ansible

@@ -7,7 +7,7 @@ import logging
 import click
 
 from harpoon.docker import find_containers
-from harpoon.hostlistproviders import ansible
+from harpoon.hostlistproviders import ansible, hosts
 
 
 class _EchoHandler(logging.StreamHandler):
@@ -44,11 +44,12 @@ def invoke(result):
     else:
         msg = "Container {id} not found (hosts tried: {hosts})".format(
             id=container_id,
-            hosts=", ".join(host.name for host in host_list))
+            hosts=", ".join(host_list))
         click.echo(click.style(msg, fg="red"), err=True)
 
 
 ansible.create_provider_command(fire)
+hosts.create_provider_command(fire)
 
 
 if __name__ == "__main__":

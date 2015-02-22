@@ -40,14 +40,14 @@ def _get_repo_tags(docker_client, image_id):
 
 
 def _pretty_format_container(host, container, repo_tags):
-    return "Found container {id} on host {host.name} (tagged {tags})".format(
+    return "Found container {id} on host {host} (tagged {tags})".format(
         id=container["Id"],
         host=host,
         tags=", ".join(repo_tags))
 
 
 def _get_client(host):
-    base_url = "tcp://{}:{}".format(host.name, DOCKER_PORT)
+    base_url = "tcp://{}:{}".format(host, DOCKER_PORT)
     return docker.Client(base_url=base_url, version=DOCKER_VERSION)
 
 
