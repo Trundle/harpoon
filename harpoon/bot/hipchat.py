@@ -8,7 +8,7 @@ import logging
 from sleekxmpp import ClientXMPP
 
 from harpoon.docker import find_containers
-from harpoon.hostlistproviders import ansible
+from harpoon.hostlistproviders import ansible, hosts
 
 
 MUC_EXTENSION = "xep_0045"
@@ -75,6 +75,7 @@ def run(host_list, jid, password, nickname, room):
 
 
 ansible.create_provider_command(bot)
+hosts.create_provider_command(bot)
 
 
 if __name__ == "__main__":
