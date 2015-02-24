@@ -12,7 +12,8 @@ setup(
     license="MIT",
     version=__version__,
     url="https://github.com/Trundle/harpoon",
-    packages=["harpoon"],
+    packages=["harpoon", "harpoon.bot", "harpoon.hostlistproviders",
+              "harpoon.test"],
     entry_points={
         "console_scripts": [
             "harpoon = harpoon.__main__:fire",
