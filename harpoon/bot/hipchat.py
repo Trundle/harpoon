@@ -21,6 +21,8 @@ class HarpoonBot(ClientXMPP):
         self._nick = nick
         self._rooms_to_join = rooms_to_join
         self._host_list = host_list
+        self.whitespace_keepalive = True
+        self.whitespace_keepalive_interval = 60
         self.add_event_handler("session_start", self._on_session_started)
         self.add_event_handler("roster_update", self._on_roster_update)
         self.add_event_handler("message", self._on_message)
