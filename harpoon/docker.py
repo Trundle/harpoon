@@ -3,10 +3,12 @@ from __future__ import absolute_import, division
 import logging
 import re
 from collections import defaultdict
+from textwrap import dedent
 
 import docker
 import requests
 from requests.exceptions import HTTPError, RequestException
+
 
 DOCKER_PORT = 2375
 DOCKER_VERSION = "1.15"
@@ -39,11 +41,32 @@ def _get_repo_tags(docker_client, image_id):
             return image["RepoTags"]
 
 
+def _indent(lines, indentation):
+    return indentation + ("\n" + indentation).join(lines.splitlines())
+
+
+def _pretty_print_ports(ports):
+    return "\n".join(
+        "* {IP}:{PublicPort} -> {PrivatePort} ({Type})".format(**port)
+        for port in ports
+    )
+
+
 def _pretty_format_container(host, container, repo_tags):
-    return "Found container {id} on host {host} (tagged {tags})".format(
-        id=container["Id"],
+    msg = dedent("""\
+        Found container {id} on host {host}:
+          - Tags: {tags}
+          - Exposed ports: {ports}""")
+    if container["Ports"]:
+        ports = _pretty_print_ports(container["Ports"])
+        ports = "\n" + _indent(ports, " " * 6)
+    else:
+        ports = "(none)"
+    return msg.format(
+        id=container["Id"][:12],
         host=host,
-        tags=", ".join(repo_tags))
+        tags=", ".join(repo_tags),
+        ports=ports)
 
 
 def _get_client(host):

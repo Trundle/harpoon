@@ -43,7 +43,7 @@ class HarpoonBot(ClientXMPP):
             container_id = body.split(None, 1)[-1]
             containers = find_containers(self._host_list, container_id)
             if containers:
-                message.reply("\n".join(containers)).send()
+                message.reply("\n\n".join(containers)).send()
             else:
                 msg = "Container {id} not found (hosts tried: {hosts})".format(
                     id=container_id,
