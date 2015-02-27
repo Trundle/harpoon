@@ -20,7 +20,7 @@ def _is_no_such_container_exception(http_error):
             and http_error.response.text.startswith("No such container: "))
 
 
-def _find_container(docker_client, container_id):
+def _find_container_at_host(docker_client, container_id):
     try:
         try:
             info = docker_client.inspect_container(container_id)
@@ -45,7 +45,7 @@ def _indent(lines, indentation):
     return indentation + ("\n" + indentation).join(lines.splitlines())
 
 
-def _pretty_print_ports(ports):
+def _pretty_format_ports(ports):
     return "\n".join(
         "* {IP}:{PublicPort} -> {PrivatePort} ({Type})".format(**port)
         for port in ports
@@ -58,7 +58,7 @@ def _pretty_format_container(host, container, repo_tags):
           - Tags: {tags}
           - Exposed ports: {ports}""")
     if container["Ports"]:
-        ports = _pretty_print_ports(container["Ports"])
+        ports = _pretty_format_ports(container["Ports"])
         ports = "\n" + _indent(ports, " " * 6)
     else:
         ports = "(none)"
@@ -89,7 +89,7 @@ def _network_settings_to_ports(settings):
 def find_container(host_list, container_id):
     for host in host_list:
         docker_client = _get_client(host)
-        container = _find_container(docker_client, container_id)
+        container = _find_container_at_host(docker_client, container_id)
         if container is not None:
             # "Unify" container model with that of find_containers_by_image
             ports = _network_settings_to_ports(container["NetworkSettings"])
