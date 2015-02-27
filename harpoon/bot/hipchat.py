@@ -16,6 +16,13 @@ DELAY_EXTENSION = "xep_0203"
 
 
 class HarpoonBot(ClientXMPP):
+    HARPOON_COMMAND = (
+        "harpoon",
+        "-->",
+        "\N{RIGHTWARDS HARPOON WITH BARB UPWARDS}",
+        "\N{RIGHTWARDS HARPOON WITH BARB DOWNWARDS}",
+    )
+
     def __init__(self, jid, password, nick, rooms_to_join, host_list):
         ClientXMPP.__init__(self, jid, password)
         self._nick = nick
@@ -39,7 +46,9 @@ class HarpoonBot(ClientXMPP):
 
     def _on_message(self, message):
         body = message["body"].strip()
-        if self._safe_to_react(message) and body.startswith("harpoon"):
+        if (self._safe_to_react(message)
+            and body.startswith(self.HARPOON_COMMAND)
+        ):
             container_id = body.split(None, 1)[-1]
             containers = find_containers(self._host_list, container_id)
             if containers:
