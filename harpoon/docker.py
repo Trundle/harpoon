@@ -74,11 +74,27 @@ def _get_client(host):
     return docker.Client(base_url=base_url, version=DOCKER_VERSION)
 
 
+def _network_settings_to_ports(settings):
+    for (port_and_type, ports) in settings["Ports"].items():
+        assert len(ports) == 1
+        (port, _, port_type) = port_and_type.partition("/")
+        yield {
+            "PrivatePort": int(port),
+            "IP": ports[0]["HostIp"],
+            "PublicPort": ports[0]["HostPort"],
+            "Type": port_type,
+        }
+
+
 def find_container(host_list, container_id):
     for host in host_list:
         docker_client = _get_client(host)
         container = _find_container(docker_client, container_id)
         if container is not None:
+            # "Unify" container model with that of find_containers_by_image
+            ports = _network_settings_to_ports(container["NetworkSettings"])
+            container["Ports"] = list(ports)
+
             repo_tags = _get_repo_tags(docker_client, container["Image"])
             return _pretty_format_container(host, container, repo_tags)
 
