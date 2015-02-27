@@ -69,7 +69,7 @@ class HarpoonBot(ClientXMPP):
 @click.option("--jid", envvar="HIPCHAT_JID")
 @click.option("--password", envvar="HIPCHAT_PASSWORD")
 @click.option("--nickname", envvar="HIPCHAT_NICKNAME")
-@click.argument("room")
+@click.option("--room", multiple=True)
 def bot(jid, password, nickname, room):
     pass
 
@@ -78,7 +78,7 @@ def bot(jid, password, nickname, room):
 def run(host_list, jid, password, nickname, room):
     logging.basicConfig(level=logging.WARN)
 
-    xmpp = HarpoonBot(jid, password, nickname, [room], host_list)
+    xmpp = HarpoonBot(jid, password, nickname, room, host_list)
     xmpp.connect()
     xmpp.process(block=True)
 

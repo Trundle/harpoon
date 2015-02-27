@@ -31,7 +31,7 @@ Runnig the hipchat bot
 
 See https://www.hipchat.com/account/xmpp for your XMPP details.
 
-``HIPCHAT_PASSWORD=geheim harpoon-hipchat --nickname "Your Name" --jid 1234_5678@chat.hipchat.com 1234_someroom@conf.hipchat.com ansible -i /path/to/your/inventory --ask-vault-pass``
+``HIPCHAT_PASSWORD=geheim harpoon-hipchat --nickname "Your Name" --jid 1234_5678@chat.hipchat.com --room 1234_someroom@conf.hipchat.com ansible -i /path/to/your/inventory --ask-vault-pass``
 
 
 License
