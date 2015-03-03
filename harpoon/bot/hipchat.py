@@ -4,6 +4,7 @@ from __future__ import print_function, unicode_literals
 
 import click
 import logging
+import re
 from concurrent import futures
 
 from sleekxmpp import ClientXMPP
@@ -16,13 +17,19 @@ MUC_EXTENSION = "xep_0045"
 DELAY_EXTENSION = "xep_0203"
 
 
-class HarpoonBot(ClientXMPP):
-    HARPOON_COMMAND = (
+def _create_command_matcher():
+    commands = {
         "harpoon",
         "-->",
         "\N{RIGHTWARDS HARPOON WITH BARB UPWARDS}",
         "\N{RIGHTWARDS HARPOON WITH BARB DOWNWARDS}",
-    )
+    }
+    alternatives = "|".join(map(re.escape, commands))
+    return re.compile("({})(.+)$".format(alternatives)).match
+
+
+class HarpoonBot(ClientXMPP):
+    _HARPOON_COMMAND_MATCHER = _create_command_matcher()
 
     def __init__(self, jid, password, nick, rooms_to_join, executor,
                  host_list):
@@ -49,19 +56,21 @@ class HarpoonBot(ClientXMPP):
 
     def _on_message(self, message):
         body = message["body"].strip()
-        if (self._safe_to_react(message)
-            and body.startswith(self.HARPOON_COMMAND)
-        ):
-            container_id = body.split(None, 1)[-1]
-            containers = find_containers(
-                self._executor, self._host_list, container_id)
-            if containers:
-                message.reply("\n\n".join(containers)).send()
-            else:
-                msg = "Container {id} not found (hosts tried: {hosts})".format(
-                    id=container_id,
-                    hosts=", ".join(self._host_list))
-                message.reply(msg).send()
+        if self._safe_to_react(message):
+            match = self._HARPOON_COMMAND_MATCHER(body)
+            if match:
+                self._harpoon(message, match.group(2).strip())
+
+    def _harpoon(self, message, container_id):
+        containers = find_containers(
+            self._executor, self._host_list, container_id)
+        if containers:
+            message.reply("\n\n".join(containers)).send()
+        else:
+            msg = "Container {id} not found (hosts tried: {hosts})".format(
+                id=container_id,
+                hosts=", ".join(self._host_list))
+            message.reply(msg).send()
 
     def _safe_to_react(self, message):
         delayed = bool(message["delay"]["stamp"])
