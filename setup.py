@@ -24,6 +24,7 @@ setup(
         "ansible",
         "click",
         "docker-py",
+        "futures",
         # Bot dependencies
         "sleekxmpp"
     ])

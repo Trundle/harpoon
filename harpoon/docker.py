@@ -2,7 +2,7 @@ from __future__ import absolute_import, division
 
 import logging
 import re
-from collections import defaultdict
+from itertools import chain
 from textwrap import dedent
 
 import docker
@@ -86,10 +86,14 @@ def _network_settings_to_ports(settings):
         }
 
 
-def find_container(host_list, container_id):
-    for host in host_list:
+def find_container(executor, host_list, container_id):
+    def query(host):
         docker_client = _get_client(host)
         container = _find_container_at_host(docker_client, container_id)
+        return (host, docker_client, container)
+
+    containers = executor.map(query, host_list)
+    for (host, docker_client, container) in containers:
         if container is not None:
             # "Unify" container model with that of find_containers_by_image
             ports = _network_settings_to_ports(container["NetworkSettings"])
@@ -108,23 +112,29 @@ def _create_image_matcher(image):
     return matcher
 
 
-def find_containers_by_image(host_list, image):
+def find_containers_by_image(executor, host_list, image):
     matcher = _create_image_matcher(image)
-    containers_found = []
-    images_found = defaultdict(list)
-    for host in host_list:
+
+    def query(host):
+        images = []
         docker_client = _get_client(host)
         for image in docker_client.images():
             if any(matcher(tag) for tag in image["RepoTags"]):
-                images_found[(host, docker_client)].append(image)
-    for ((host, docker_client), images) in images_found.items():
-        for container in docker_client.containers():
-            for image in images:
-                if container["Image"] in image["RepoTags"]:
-                    formatted_container = _pretty_format_container(
-                        host, container, image["RepoTags"])
-                    containers_found.append(formatted_container)
-    return containers_found
+                images.append(image)
+
+        containers_found = []
+        if images:
+            for container in docker_client.containers():
+              for image in images:
+                  if container["Image"] in image["RepoTags"]:
+                      formatted_container = _pretty_format_container(
+                          host, container, image["RepoTags"])
+                      containers_found.append(formatted_container)
+
+        return containers_found
+
+    containers = executor.map(query, host_list)
+    return list(chain.from_iterable(containers))
 
 
 def is_container_id(x):
@@ -143,9 +153,10 @@ def is_container_id(x):
     return (digits / (letters + digits)) > 0.3
 
 
-def find_containers(host_list, image_or_container_id):
+def find_containers(executor, host_list, image_or_container_id):
     if is_container_id(image_or_container_id):
-        container = find_container(host_list, image_or_container_id)
+        container = find_container(executor, host_list, image_or_container_id)
         return [container] if container else []
     else:
-        return find_containers_by_image(host_list, image_or_container_id)
+        return find_containers_by_image(
+            executor, host_list, image_or_container_id)

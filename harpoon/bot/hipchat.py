@@ -4,6 +4,7 @@ from __future__ import print_function, unicode_literals
 
 import click
 import logging
+from concurrent import futures
 
 from sleekxmpp import ClientXMPP
 
@@ -23,10 +24,12 @@ class HarpoonBot(ClientXMPP):
         "\N{RIGHTWARDS HARPOON WITH BARB DOWNWARDS}",
     )
 
-    def __init__(self, jid, password, nick, rooms_to_join, host_list):
+    def __init__(self, jid, password, nick, rooms_to_join, executor,
+                 host_list):
         ClientXMPP.__init__(self, jid, password)
         self._nick = nick
         self._rooms_to_join = rooms_to_join
+        self._executor = executor
         self._host_list = host_list
         self.whitespace_keepalive = True
         self.whitespace_keepalive_interval = 60
@@ -50,7 +53,8 @@ class HarpoonBot(ClientXMPP):
             and body.startswith(self.HARPOON_COMMAND)
         ):
             container_id = body.split(None, 1)[-1]
-            containers = find_containers(self._host_list, container_id)
+            containers = find_containers(
+                self._executor, self._host_list, container_id)
             if containers:
                 message.reply("\n\n".join(containers)).send()
             else:
@@ -66,21 +70,23 @@ class HarpoonBot(ClientXMPP):
 
 
 @click.group()
+@click.option("-p", "--parallelism", default=5)
 @click.option("--jid", envvar="HIPCHAT_JID")
 @click.option("--password", envvar="HIPCHAT_PASSWORD")
 @click.option("--nickname", envvar="HIPCHAT_NICKNAME")
 @click.option("--room", multiple=True)
-def bot(jid, password, nickname, room):
+def bot(parallelism, jid, password, nickname, room):
     pass
 
 
 @bot.resultcallback()
-def run(host_list, jid, password, nickname, room):
+def run(host_list, parallelism, jid, password, nickname, room):
     logging.basicConfig(level=logging.WARN)
 
-    xmpp = HarpoonBot(jid, password, nickname, room, host_list)
-    xmpp.connect()
-    xmpp.process(block=True)
+    with futures.ThreadPoolExecutor(max_workers=parallelism) as executor:
+        xmpp = HarpoonBot(jid, password, nickname, room, executor, host_list)
+        xmpp.connect()
+        xmpp.process(block=True)
 
 
 ansible.create_provider_command(bot)

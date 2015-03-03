@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import logging
+from concurrent import futures
 from functools import wraps
 
 import click
@@ -34,16 +35,18 @@ class _FireGroup(click.Group):
 
 
 @click.group(cls=_FireGroup)
-def fire():
+@click.option("-p", "--parallelism", default=5)
+def fire(parallelism):
     root = logging.getLogger('')
     root.addHandler(_EchoHandler())
     root.setLevel(logging.WARN)
 
 
 @fire.resultcallback()
-def invoke(result):
+def invoke(result, parallelism):
     (host_list, container_id) = result
-    containers = find_containers(host_list, container_id)
+    with futures.ThreadPoolExecutor(max_workers=parallelism) as executor:
+        containers = find_containers(executor, host_list, container_id)
     if containers:
         for container in containers:
             click.echo(click.style(container, fg="green"))
