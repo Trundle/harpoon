@@ -48,7 +48,7 @@ def _indent(lines, indentation):
 def _pretty_format_ports(ports):
     return "\n".join(
         "* {IP}:{PublicPort} -> {PrivatePort} ({Type})".format(**port)
-        for port in ports
+        for port in ports if "IP" in port
     )
 
 
@@ -76,14 +76,14 @@ def _get_client(host):
 
 def _network_settings_to_ports(settings):
     for (port_and_type, ports) in settings["Ports"].items():
-        assert len(ports) == 1
-        (port, _, port_type) = port_and_type.partition("/")
-        yield {
-            "PrivatePort": int(port),
-            "IP": ports[0]["HostIp"],
-            "PublicPort": ports[0]["HostPort"],
-            "Type": port_type,
-        }
+        if ports:
+            (port, _, port_type) = port_and_type.partition("/")
+            yield {
+                "PrivatePort": int(port),
+                "IP": ports[0]["HostIp"],
+                "PublicPort": ports[0]["HostPort"],
+                "Type": port_type,
+            }
 
 
 def find_container(executor, host_list, container_id):
