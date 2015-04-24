@@ -13,6 +13,7 @@ from requests.exceptions import HTTPError, RequestException
 
 DOCKER_PORT = 2375
 DOCKER_VERSION = "1.15"
+TIMEOUT = 15
 
 
 def _ignore_request_exception(f):
@@ -79,7 +80,10 @@ def _pretty_format_container(host, container, repo_tags):
 
 def _get_client(host):
     base_url = "tcp://{}:{}".format(host, DOCKER_PORT)
-    return docker.Client(base_url=base_url, version=DOCKER_VERSION)
+    return docker.Client(
+        base_url=base_url,
+        version=DOCKER_VERSION,
+        timeout=TIMEOUT)
 
 
 def _network_settings_to_ports(settings):
