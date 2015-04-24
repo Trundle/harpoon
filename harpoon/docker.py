@@ -2,6 +2,7 @@ from __future__ import absolute_import, division
 
 import logging
 import re
+from functools import wraps
 from itertools import chain
 from textwrap import dedent
 
@@ -14,24 +15,31 @@ DOCKER_PORT = 2375
 DOCKER_VERSION = "1.15"
 
 
+def _ignore_request_exception(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except RequestException as e:
+            msg = "Error while contacting {}: {}".format(e.request.url, e)
+            logging.warning(msg)
+    return wrapper
+
 
 def _is_no_such_container_exception(http_error):
     return (http_error.response.status_code == requests.codes.not_found
             and http_error.response.text.startswith("No such container: "))
 
 
+@_ignore_request_exception
 def _find_container_at_host(docker_client, container_id):
     try:
-        try:
-            info = docker_client.inspect_container(container_id)
-        except HTTPError as exc:
-            if not _is_no_such_container_exception(exc):
-                raise
-        else:
-            return info
-    except RequestException as e:
-        msg = "Error while contacting {}: {}".format(docker_client.base_url, e)
-        logging.warning(msg)
+        info = docker_client.inspect_container(container_id)
+    except HTTPError as exc:
+        if not _is_no_such_container_exception(exc):
+            raise
+    else:
+        return info
 
 
 def _get_repo_tags(docker_client, image_id):
@@ -92,7 +100,7 @@ def find_container(executor, host_list, container_id):
         container = _find_container_at_host(docker_client, container_id)
         return (host, docker_client, container)
 
-    containers = executor.map(query, host_list)
+    containers = filter(None, executor.map(query, host_list))
     for (host, docker_client, container) in containers:
         if container is not None:
             # "Unify" container model with that of find_containers_by_image
@@ -115,6 +123,7 @@ def _create_image_matcher(image):
 def find_containers_by_image(executor, host_list, image):
     matcher = _create_image_matcher(image)
 
+    @_ignore_request_exception
     def query(host):
         images = []
         docker_client = _get_client(host)
@@ -133,7 +142,7 @@ def find_containers_by_image(executor, host_list, image):
 
         return containers_found
 
-    containers = executor.map(query, host_list)
+    containers = filter(None, executor.map(query, host_list))
     return list(chain.from_iterable(containers))
 
 
